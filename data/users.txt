@@ -1,0 +1,6 @@
+1;Ana;Pop
+2;Ion;Ionescu
+3;Maria;Marin
+4;Alex;Pop
+5;Elena;Matei
+6;Ana;Mara
