@@ -1,31 +1,31 @@
 package repository;
 
-import domain.FriendShip;
+import domain.Friendship;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.Optional;
 
 /**
- * Concrete file repository storing {@link FriendShip} entities.
+ * Concrete file repository storing {@link Friendship} entities.
  */
-public class FriendShipFileRepository extends AbstractFileRepository<String, FriendShip> {
+public class FriendshipFileRepository extends AbstractFileRepository<String, Friendship> {
 
-    public FriendShipFileRepository(String filePath) {
+    public FriendshipFileRepository(String filePath) {
         super(filePath);
     }
 
     @Override
-    protected FriendShip extractEntity(String line) {
+    protected Friendship extractEntity(String line) {
         String[] fields = line.split(";", -1);
         if (fields.length != 3) {
             throw new RepositoryException("Invalid friendship format (expected 3 tokens): " + line);
         }
         try {
-            int firstUserId = Integer.parseInt(fields[0].trim());
-            int secondUserId = Integer.parseInt(fields[1].trim());
+            Long firstUserId = Long.parseLong(fields[0].trim());
+            Long secondUserId = Long.parseLong(fields[1].trim());
             LocalDateTime date = LocalDateTime.parse(fields[2].trim());
-            return new FriendShip(firstUserId, secondUserId, date);
+            return new Friendship(firstUserId, secondUserId, date);
         } catch (NumberFormatException e) {
             throw new RepositoryException("Invalid numeric IDs in friendship line: " + line, e);
         } catch (DateTimeParseException e) {
@@ -34,7 +34,7 @@ public class FriendShipFileRepository extends AbstractFileRepository<String, Fri
     }
 
     @Override
-    protected String createEntityAsString(FriendShip friendShip) {
+    protected String createEntityAsString(Friendship friendShip) {
         return friendShip.getFirstUserId() + ";" +
                 friendShip.getSecondUserId() + ";" +
                 friendShip.getDate().toString();
@@ -52,8 +52,8 @@ public class FriendShipFileRepository extends AbstractFileRepository<String, Fri
             throw new RepositoryException("Invalid friendship ID format (expected 'id1-id2'): " + id);
         }
         try {
-            int first = Integer.parseInt(parts[0].trim());
-            int second = Integer.parseInt(parts[1].trim());
+            long first = Long.parseLong(parts[0].trim());
+            long second = Long.parseLong(parts[1].trim());
             return Math.min(first, second) + "-" + Math.max(first, second);
         } catch (NumberFormatException e) {
             throw new RepositoryException("Invalid numeric ID within composite key: " + id, e);
@@ -61,12 +61,12 @@ public class FriendShipFileRepository extends AbstractFileRepository<String, Fri
     }
 
     @Override
-    public Optional<FriendShip> findById(String id) {
+    public Optional<Friendship> findById(String id) {
         return super.findById(normalizeId(id));
     }
 
     @Override
-    public Optional<FriendShip> remove(String id) {
+    public Optional<Friendship> remove(String id) {
         return super.remove(normalizeId(id));
     }
 }

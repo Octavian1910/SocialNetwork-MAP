@@ -5,7 +5,7 @@ import domain.User;
 /**
  * Concrete file repository storing {@link User} entities.
  */
-public class UserFileRepository extends AbstractFileRepository<Integer, User> {
+public class UserFileRepository extends AbstractFileRepository<Long, User> {
 
     public UserFileRepository(String filePath) {
         super(filePath);
@@ -17,8 +17,9 @@ public class UserFileRepository extends AbstractFileRepository<Integer, User> {
         if (fields.length != 3) {
             throw new RepositoryException("Invalid line format (expected 3 tokens): " + line);
         }
+
         try {
-            int id = Integer.parseInt(fields[0].trim());
+            Long id = Long.parseLong(fields[0].trim());
             String firstName = fields[1].trim();
             String lastName = fields[2].trim();
             return new User(id, firstName, lastName);

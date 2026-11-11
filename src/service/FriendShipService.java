@@ -1,6 +1,6 @@
 package service;
 
-import domain.FriendShip;
+import domain.Friendship;
 import domain.validator.ValidationException;
 import domain.validator.Validator;
 import repository.Repository;
@@ -8,20 +8,20 @@ import repository.RepositoryException;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
  * Service coordinating friendship relationships between users.
  */
 public class FriendShipService {
-    private final Repository<String, FriendShip> repository;
+    private final Repository<String, Friendship> repository;
     private final UserService userService;
-    private final Validator<FriendShip> validator;
+    private final Validator<Friendship> validator;
 
-    public FriendShipService(Repository<String, FriendShip> repository,
+    public FriendShipService(Repository<String, Friendship> repository,
                              UserService userService,
-                             Validator<FriendShip> validator) {
+                             Validator<Friendship> validator) {
         this.repository = repository;
         this.userService = userService;
         this.validator = validator;
@@ -36,8 +36,8 @@ public class FriendShipService {
      * @throws ServiceException    if users do not exist
      * @throws RepositoryException if friendship already exists
      */
-    public void addFriendShip(int firstUserId, int secondUserId) {
-        FriendShip friendShip = new FriendShip(firstUserId, secondUserId);
+    public void addFriendShip(Long firstUserId, Long secondUserId) {
+        Friendship friendShip = new Friendship(firstUserId, secondUserId);
         validator.validate(friendShip);
 
         // Verificam existenta ambilor utilizatori inainte de salvare
@@ -54,9 +54,9 @@ public class FriendShipService {
      * @param secondUserId second user ID
      * @throws ServiceException if the friendship does not exist
      */
-    public void removeFriendShip(int firstUserId, int secondUserId) {
-        FriendShip friendShip = new FriendShip(firstUserId, secondUserId);
-        Optional<FriendShip> removed = repository.remove(friendShip.getId());
+    public void removeFriendShip(Long firstUserId, Long secondUserId) {
+        Friendship friendShip = new Friendship(firstUserId, secondUserId);
+        Optional<Friendship> removed = repository.remove(friendShip.getId());
         if (removed.isEmpty()) {
             throw new ServiceException("Friendship between " + firstUserId + " and " + secondUserId + " does not exist!");
         }
@@ -67,7 +67,7 @@ public class FriendShipService {
      *
      * @return collection of friendships
      */
-    public Collection<FriendShip> getAllFriendShips() {
+    public Collection<Friendship> getAllFriendShips() {
         return repository.findAll();
     }
 
@@ -77,10 +77,10 @@ public class FriendShipService {
      * @param userId the user ID
      * @return collection of friend IDs
      */
-    public Collection<Integer> getFriendIds(int userId) {
+    public Collection<Long> getFriendIds(Long userId) {
         return repository.findAll().stream()
-                .filter(fs -> fs.getFirstUserId() == userId || fs.getSecondUserId() == userId)
-                .map(fs -> fs.getFirstUserId() == userId ? fs.getSecondUserId() : fs.getFirstUserId())
+                .filter(fs -> Objects.equals(fs.getFirstUserId(), userId) || Objects.equals(fs.getSecondUserId(), userId))
+                .map(fs -> Objects.equals(fs.getFirstUserId(), userId) ? fs.getSecondUserId() : fs.getFirstUserId())
                 .toList();
     }
 
@@ -89,7 +89,7 @@ public class FriendShipService {
      *
      * @param userId the user ID
      */
-    public void removeAllFriendshipsOfUser(int userId) {
+    public void removeAllFriendshipsOfUser(Long userId) {
         new ArrayList<>(getFriendIds(userId))
                 .forEach(friendId -> removeFriendShip(userId, friendId));
     }

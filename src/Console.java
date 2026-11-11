@@ -1,9 +1,8 @@
-package ui;
-
-import domain.FriendShip;
+import domain.Friendship;
 import domain.User;
 import domain.validator.ValidationException;
 import repository.RepositoryException;
+import repository.factory.RepositoryType;
 import service.FriendShipService;
 import service.NetworkService;
 import service.ServiceException;
@@ -21,18 +20,18 @@ public class Console {
     private final FriendShipService friendShipService;
     private final NetworkService networkService;
     private final Scanner scanner = new Scanner(System.in);
+    private final RepositoryType repositoryType;
 
     public Console(UserService userService,
                    FriendShipService friendShipService,
-                   NetworkService networkService) {
+                   NetworkService networkService,
+                   RepositoryType repositoryType) {
         this.userService = userService;
         this.friendShipService = friendShipService;
         this.networkService = networkService;
+        this.repositoryType = repositoryType;
     }
 
-    /**
-     * Starts the interactive command-line interface loop.
-     */
     public void run() {
         int option = -1;
         do {
@@ -40,36 +39,16 @@ public class Console {
             try {
                 option = Integer.parseInt(scanner.nextLine().trim());
                 switch (option) {
-                    case 1:
-                        showAllUsers();
-                        break;
-                    case 2:
-                        addUser();
-                        break;
-                    case 3:
-                        removeUser();
-                        break;
-                    case 4:
-                        showAllFriendships();
-                        break;
-                    case 5:
-                        addFriendship();
-                        break;
-                    case 6:
-                        removeFriendship();
-                        break;
-                    case 7:
-                        showNumberOfCommunities();
-                        break;
-                    case 8:
-                        showMostSociableCommunity();
-                        break;
-                    case 0:
-                        System.out.println("Exiting application. Goodbye!");
-                        break;
-                    default:
-                        System.out.println("Invalid option! Please try again.");
-                        break;
+                    case 1 -> showAllUsers();
+                    case 2 -> addUser();
+                    case 3 -> removeUser();
+                    case 4 -> showAllFriendships();
+                    case 5 -> addFriendship();
+                    case 6 -> removeFriendship();
+                    case 7 -> showNumberOfCommunities();
+                    case 8 -> showMostSociableCommunity();
+                    case 0 -> System.out.println("Exiting application. Goodbye!");
+                    default -> System.out.println("Invalid option! Please try again.");
                 }
             } catch (NumberFormatException e) {
                 System.out.println("Input Error: Please enter a valid numeric value!");
@@ -111,52 +90,55 @@ public class Console {
     }
 
     private void addUser() {
-        System.out.print("ID: ");
-        int id = Integer.parseInt(scanner.nextLine().trim());
         System.out.print("First name: ");
         String firstName = scanner.nextLine().trim();
         System.out.print("Last name: ");
         String lastName = scanner.nextLine().trim();
 
-        userService.addUser(id, firstName, lastName);
-        System.out.println("User added successfully!");
+        User savedUser;
+        if (repositoryType == RepositoryType.DATABASE) {
+            savedUser = userService.addUser(firstName, lastName);
+        } else {
+            System.out.print("ID: ");
+            Long id = Long.parseLong(scanner.nextLine().trim());
+            savedUser = userService.addUser(id, firstName, lastName);
+        }
+
+        System.out.println("User added successfully with ID: " + savedUser.getId());
     }
 
     private void removeUser() {
         System.out.print("User ID to remove: ");
-        int id = Integer.parseInt(scanner.nextLine().trim());
-
+        Long id = Long.parseLong(scanner.nextLine().trim());
         networkService.removeUserAndFriendships(id);
         System.out.println("User and associated friendships have been removed!");
     }
 
     private void showAllFriendships() {
-        Collection<FriendShip> friendships = friendShipService.getAllFriendShips();
+        Collection<Friendship> friendships = friendShipService.getAllFriendShips();
         if (friendships.isEmpty()) {
             System.out.println("There are no registered friendships.");
             return;
         }
-        for (FriendShip fs : friendships) {
+        for (Friendship fs : friendships) {
             System.out.println(fs);
         }
     }
 
     private void addFriendship() {
         System.out.print("First user ID: ");
-        int firstId = Integer.parseInt(scanner.nextLine().trim());
+        Long firstId = Long.parseLong(scanner.nextLine().trim());
         System.out.print("Second user ID: ");
-        int secondId = Integer.parseInt(scanner.nextLine().trim());
-
+        Long secondId = Long.parseLong(scanner.nextLine().trim());
         friendShipService.addFriendShip(firstId, secondId);
         System.out.println("Friendship added successfully!");
     }
 
     private void removeFriendship() {
         System.out.print("First user ID: ");
-        int firstId = Integer.parseInt(scanner.nextLine().trim());
+        Long firstId = Long.parseLong(scanner.nextLine().trim());
         System.out.print("Second user ID: ");
-        int secondId = Integer.parseInt(scanner.nextLine().trim());
-
+        Long secondId = Long.parseLong(scanner.nextLine().trim());
         friendShipService.removeFriendShip(firstId, secondId);
         System.out.println("Friendship removed successfully!");
     }
@@ -167,13 +149,13 @@ public class Console {
     }
 
     private void showMostSociableCommunity() {
-        Set<Integer> community = networkService.getMostSociableCommunity();
+        Set<Long> community = networkService.getMostSociableCommunity();
         if (community.isEmpty()) {
             System.out.println("There are no communities.");
             return;
         }
         System.out.println("The most sociable community contains users:");
-        for (Integer userId : community) {
+        for (Long userId : community) {
             System.out.println(" - " + userService.findUserById(userId));
         }
     }

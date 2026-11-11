@@ -7,9 +7,9 @@ import java.util.Objects;
  * Domain entity representing an undirected friendship relationship between two users.
  * The identifier is consistently normalized as "smallerId-largerId".
  */
-public class FriendShip implements Entity<String> {
-    private final int firstUserId;
-    private final int secondUserId;
+public class Friendship implements Entity<String> {
+    private final Long firstUserId;
+    private final Long secondUserId;
     private final LocalDateTime date;
 
     /**
@@ -19,7 +19,10 @@ public class FriendShip implements Entity<String> {
      * @param secondUserId ID of the second user
      * @param date         the timestamp when the friendship was formed
      */
-    public FriendShip(int firstUserId, int secondUserId, LocalDateTime date) {
+    public Friendship(Long firstUserId, Long secondUserId, LocalDateTime date) {
+        if (firstUserId == null || secondUserId == null) {
+            throw new IllegalArgumentException("User IDs in friendship must not be null!");
+        }
         this.firstUserId = Math.min(firstUserId, secondUserId);
         this.secondUserId = Math.max(firstUserId, secondUserId);
         this.date = date;
@@ -31,15 +34,15 @@ public class FriendShip implements Entity<String> {
      * @param firstUserId  ID of the first user
      * @param secondUserId ID of the second user
      */
-    public FriendShip(int firstUserId, int secondUserId) {
+    public Friendship(Long firstUserId, Long secondUserId) {
         this(firstUserId, secondUserId, LocalDateTime.now());
     }
 
-    public int getFirstUserId() {
+    public Long getFirstUserId() {
         return firstUserId;
     }
 
-    public int getSecondUserId() {
+    public Long getSecondUserId() {
         return secondUserId;
     }
 
@@ -56,8 +59,9 @@ public class FriendShip implements Entity<String> {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        FriendShip that = (FriendShip) o;
-        return firstUserId == that.firstUserId && secondUserId == that.secondUserId;
+        Friendship that = (Friendship) o;
+        return Objects.equals(firstUserId, that.firstUserId) &&
+                Objects.equals(secondUserId, that.secondUserId);
     }
 
     @Override

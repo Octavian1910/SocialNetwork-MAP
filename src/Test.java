@@ -1,11 +1,11 @@
-import domain.FriendShip;
+import domain.Friendship;
 import domain.User;
 import domain.criteria.UserCriteria;
-import domain.validator.FriendShipValidator;
+import domain.validator.FriendshipValidator;
 import domain.validator.UserValidator;
 import domain.validator.ValidationException;
 import domain.validator.Validator;
-import repository.FriendShipFileRepository;
+import repository.FriendshipFileRepository;
 import repository.InMemoryRepository;
 import repository.RepositoryException;
 import repository.UserFileRepository;
@@ -90,78 +90,74 @@ public class Test {
     }
 
     private static void testDomainAndValidators() {
-        User u1 = new User(1, "Ana", "Pop");
-        User u2 = new User(1, "AltNume", "AltPrenume");
-        User u3 = new User(2, "Ion", "Ionescu");
+        User u1 = new User(1L, "Ana", "Pop");
+        User u2 = new User(1L, "AltNume", "AltPrenume");
+        User u3 = new User(2L, "Ion", "Ionescu");
         assert u1.equals(u2) && !u1.equals(u3);
-        assert u1.getId() == 1 && u1.getFirstName().equals("Ana") && u1.getLastName().equals("Pop");
+        assert u1.getId().equals(1L) && u1.getFirstName().equals("Ana") && u1.getLastName().equals("Pop");
 
         UserValidator userVal = new UserValidator();
         userVal.validate(u1);
         assertThrows(ValidationException.class, () -> userVal.validate(null), "null");
-        assertThrows(ValidationException.class, () -> userVal.validate(new User(-1, "ana", "")), "positive");
-        assertThrows(ValidationException.class, () -> userVal.validate(new User(-1, "ana", "")), "uppercase");
-        assertThrows(ValidationException.class, () -> userVal.validate(new User(-1, "ana", "")), "empty");
+        assertThrows(ValidationException.class, () -> userVal.validate(new User(-1L, "ana", "")), "positive");
+        assertThrows(ValidationException.class, () -> userVal.validate(new User(-1L, "ana", "")), "uppercase");
+        assertThrows(ValidationException.class, () -> userVal.validate(new User(-1L, "ana", "")), "empty");
 
-        FriendShip f1 = new FriendShip(1, 2);
-        FriendShip f2 = new FriendShip(2, 1);
+        Friendship f1 = new Friendship(1L, 2L);
+        Friendship f2 = new Friendship(2L, 1L);
         assert f1.equals(f2) && f1.getId().equals("1-2") && f2.getId().equals("1-2");
 
-        FriendShipValidator fsVal = new FriendShipValidator();
+        FriendshipValidator fsVal = new FriendshipValidator();
         fsVal.validate(f1);
-        assertThrows(ValidationException.class, () -> fsVal.validate(new FriendShip(1, 1)), "themselves");
-        assertThrows(ValidationException.class, () -> fsVal.validate(new FriendShip(-1, 0)), "positive");
+        assertThrows(ValidationException.class, () -> fsVal.validate(new Friendship(1L, 1L)), "themselves");
+        assertThrows(ValidationException.class, () -> fsVal.validate(new Friendship(-1L, 0L)), "positive");
     }
 
     private static void testLambdaValidatorAndCriteria() {
         resetFiles();
         UserFileRepository repo = new UserFileRepository(USERS_FILE);
 
-        // 1. Validare compusă cu andThen folosind exclusiv lambda
         UserValidator baseValidator = new UserValidator();
         Validator<User> composedValidator = baseValidator.andThen(user -> {
             if (user.getLastName().length() < 3) {
                 throw new ValidationException("Last name must have at least 3 characters!");
             }
         });
-
-        User validUser = new User(20, "Vasile", "Popescu");
+        User validUser = new User(20L, "Vasile", "Popescu");
         composedValidator.validate(validUser);
-
-        User shortLastNameUser = new User(21, "Vasile", "Po");
+        User shortLastNameUser = new User(21L, "Vasile", "Po");
         assertThrows(ValidationException.class, () -> composedValidator.validate(shortLastNameUser), "at least 3 characters");
 
-        // 2. Căutare findAll(Predicate) combinată cu and, or, Predicate.not
         Predicate<User> startsWithA = UserCriteria.firstNameStartsWith("A");
         Predicate<User> namePop = UserCriteria.hasLastName("Pop");
-        Predicate<User> idAbove5 = UserCriteria.idGreaterThan(5);
+        Predicate<User> idAbove5 = UserCriteria.idGreaterThan(5L);
 
         List<User> matchedUsers = repo.findAll(startsWithA.and(namePop));
-        assert matchedUsers.size() == 2; // 1;Ana;Pop si 4;Alex;Pop
+        assert matchedUsers.size() == 2;
 
         List<User> notPopAndHighId = repo.findAll(Predicate.not(namePop).and(idAbove5));
-        assert notPopAndHighId.size() == 5; // 6, 7, 8, 9, 10
+        assert notPopAndHighId.size() == 5;
     }
 
     private static void testRepositories() {
         resetFiles();
-        InMemoryRepository<Integer, User> memRepo = new InMemoryRepository<>();
-        memRepo.add(new User(11, "Radu", "Iliescu"));
-        assert memRepo.findAll().size() == 1 && memRepo.findById(11).isPresent();
-        assertThrows(RepositoryException.class, () -> memRepo.add(new User(11, "Alt", "Nume")), "already exists");
-        assert memRepo.remove(999).isEmpty();
-        assert memRepo.remove(11).isPresent() && memRepo.findAll().isEmpty();
+        InMemoryRepository<Long, User> memRepo = new InMemoryRepository<>();
+        memRepo.add(new User(11L, "Radu", "Iliescu"));
+        assert memRepo.findAll().size() == 1 && memRepo.findById(11L).isPresent();
+        assertThrows(RepositoryException.class, () -> memRepo.add(new User(11L, "Alt", "Nume")), "already exists");
+        assert memRepo.remove(999L).isEmpty();
+        assert memRepo.remove(11L).isPresent() && memRepo.findAll().isEmpty();
 
         UserFileRepository userRepo = new UserFileRepository(USERS_FILE);
-        assert userRepo.findAll().size() == 10 && userRepo.findById(1).isPresent() && userRepo.findById(999).isEmpty();
-        assertThrows(RepositoryException.class, () -> userRepo.add(new User(1, "Duplicat", "Nume")), "already exists");
-        userRepo.add(new User(11, "Paul", "Enache"));
+        assert userRepo.findAll().size() == 10 && userRepo.findById(1L).isPresent() && userRepo.findById(999L).isEmpty();
+        assertThrows(RepositoryException.class, () -> userRepo.add(new User(1L, "Duplicat", "Nume")), "already exists");
+        userRepo.add(new User(11L, "Paul", "Enache"));
         assert userRepo.findAll().size() == 11;
 
-        FriendShipFileRepository fsRepo = new FriendShipFileRepository(FRIENDSHIPS_FILE);
+        FriendshipFileRepository fsRepo = new FriendshipFileRepository(FRIENDSHIPS_FILE);
         assert fsRepo.findAll().size() == 8;
         assert fsRepo.findById("2-1").isPresent() && fsRepo.findById("8-7").isPresent() && fsRepo.findById("10-1").isEmpty();
-        assertThrows(RepositoryException.class, () -> fsRepo.add(new FriendShip(2, 1)), "already exists");
+        assertThrows(RepositoryException.class, () -> fsRepo.add(new Friendship(2L, 1L)), "already exists");
         assert fsRepo.remove("999-1000").isEmpty();
         assert fsRepo.remove("10-9").isPresent() && fsRepo.findAll().size() == 7;
     }
@@ -170,11 +166,11 @@ public class Test {
         resetFiles();
         UserFileRepository corruptRepo = new UserFileRepository(CORRUPTED_USERS_FILE);
         assert corruptRepo.findAll().size() == 3;
-        assert corruptRepo.findById(1).isPresent();
-        assert corruptRepo.findById(4).isPresent();
-        assert corruptRepo.findById(7).isPresent();
-        assert corruptRepo.findById(2).isEmpty();
-        assert corruptRepo.findById(6).isEmpty();
+        assert corruptRepo.findById(1L).isPresent();
+        assert corruptRepo.findById(4L).isPresent();
+        assert corruptRepo.findById(7L).isPresent();
+        assert corruptRepo.findById(2L).isEmpty();
+        assert corruptRepo.findById(6L).isEmpty();
     }
 
     private static void testUserService() {
@@ -184,68 +180,65 @@ public class Test {
         UserService service = new UserService(repo, validator);
 
         assert service.getAllUsers().size() == 10;
-        assert service.findUserById(1).getFirstName().equals("Ana");
-        assertThrows(ServiceException.class, () -> service.findUserById(999), "does not exist");
-        assertThrows(ValidationException.class, () -> service.addUser(-1, "Ion", "Pop"), "positive");
-        assertThrows(RepositoryException.class, () -> service.addUser(1, "Alt", "Nume"), "already exists");
-        service.addUser(11, "George", "Vasile");
+        assert service.findUserById(1L).getFirstName().equals("Ana");
+        assertThrows(ServiceException.class, () -> service.findUserById(999L), "does not exist");
+        assertThrows(ValidationException.class, () -> service.addUser(-1L, "Ion", "Pop"), "positive");
+        assertThrows(RepositoryException.class, () -> service.addUser(1L, "Alt", "Nume"), "already exists");
+        service.addUser(11L, "George", "Vasile");
         assert service.getAllUsers().size() == 11;
-        assertThrows(ServiceException.class, () -> service.removeUser(999), "cannot be deleted");
-        service.removeUser(11);
+        assertThrows(ServiceException.class, () -> service.removeUser(999L), "cannot be deleted");
+        service.removeUser(11L);
         assert service.getAllUsers().size() == 10;
     }
 
     private static void testFriendShipService() {
         resetFiles();
         UserValidator userVal = new UserValidator();
-        FriendShipValidator fsVal = new FriendShipValidator();
+        FriendshipValidator fsVal = new FriendshipValidator();
         UserService userService = new UserService(new UserFileRepository(USERS_FILE), userVal);
-        FriendShipFileRepository fsRepo = new FriendShipFileRepository(FRIENDSHIPS_FILE);
+        FriendshipFileRepository fsRepo = new FriendshipFileRepository(FRIENDSHIPS_FILE);
         FriendShipService service = new FriendShipService(fsRepo, userService, fsVal);
 
         assert service.getAllFriendShips().size() == 8;
-        assert service.getFriendIds(2).contains(1) && service.getFriendIds(2).contains(3);
-        assertThrows(ValidationException.class, () -> service.addFriendShip(1, 1), "themselves");
-        assertThrows(ServiceException.class, () -> service.addFriendShip(1, 999), "does not exist");
-        assertThrows(RepositoryException.class, () -> service.addFriendShip(2, 1), "already exists");
-        assertThrows(ServiceException.class, () -> service.removeFriendShip(1, 10), "does not exist");
-
-        service.addFriendShip(1, 10);
-        assert service.getAllFriendShips().size() == 9 && service.getFriendIds(1).contains(10);
-        service.removeFriendShip(10, 1);
-        assert service.getAllFriendShips().size() == 8 && !service.getFriendIds(1).contains(10);
-        service.removeAllFriendshipsOfUser(7);
-        assert service.getFriendIds(7).isEmpty() && service.getAllFriendShips().size() == 6;
+        assert service.getFriendIds(2L).contains(1L) && service.getFriendIds(2L).contains(3L);
+        assertThrows(ValidationException.class, () -> service.addFriendShip(1L, 1L), "themselves");
+        assertThrows(ServiceException.class, () -> service.addFriendShip(1L, 999L), "does not exist");
+        assertThrows(RepositoryException.class, () -> service.addFriendShip(2L, 1L), "already exists");
+        assertThrows(ServiceException.class, () -> service.removeFriendShip(1L, 10L), "does not exist");
+        service.addFriendShip(1L, 10L);
+        assert service.getAllFriendShips().size() == 9 && service.getFriendIds(1L).contains(10L);
+        service.removeFriendShip(10L, 1L);
+        assert service.getAllFriendShips().size() == 8 && !service.getFriendIds(1L).contains(10L);
+        service.removeAllFriendshipsOfUser(7L);
+        assert service.getFriendIds(7L).isEmpty() && service.getAllFriendShips().size() == 6;
     }
 
     private static void testNetworkService() {
         resetFiles();
         UserValidator userVal = new UserValidator();
-        FriendShipValidator fsVal = new FriendShipValidator();
+        FriendshipValidator fsVal = new FriendshipValidator();
         UserService userService = new UserService(new UserFileRepository(USERS_FILE), userVal);
-        FriendShipService fsService = new FriendShipService(new FriendShipFileRepository(FRIENDSHIPS_FILE), userService, fsVal);
+        FriendShipService fsService = new FriendShipService(new FriendshipFileRepository(FRIENDSHIPS_FILE), userService, fsVal);
         NetworkService networkService = new NetworkService(userService, fsService);
 
         assert networkService.getNumberOfCommunities() == 3;
-        Set<Integer> comm1 = networkService.getCommunity(1);
-        assert comm1.size() == 5 && comm1.contains(1) && comm1.contains(5);
-        Set<Integer> comm2 = networkService.getCommunity(7);
-        assert comm2.size() == 3 && comm2.contains(6) && comm2.contains(8);
-        Set<Integer> comm3 = networkService.getCommunity(10);
-        assert comm3.size() == 2 && comm3.contains(9) && comm3.contains(10);
-        assertThrows(ServiceException.class, () -> networkService.getCommunity(999), "does not exist");
+        Set<Long> comm1 = networkService.getCommunity(1L);
+        assert comm1.size() == 5 && comm1.contains(1L) && comm1.contains(5L);
+        Set<Long> comm2 = networkService.getCommunity(7L);
+        assert comm2.size() == 3 && comm2.contains(6L) && comm2.contains(8L);
+        Set<Long> comm3 = networkService.getCommunity(10L);
+        assert comm3.size() == 2 && comm3.contains(9L) && comm3.contains(10L);
+        assertThrows(ServiceException.class, () -> networkService.getCommunity(999L), "does not exist");
 
-        Set<Integer> mostSociable = networkService.getMostSociableCommunity();
-        assert mostSociable.size() == 5 && mostSociable.contains(1) && mostSociable.contains(5);
-
-        assertThrows(ServiceException.class, () -> networkService.removeUserAndFriendships(999), "cannot be deleted");
-        networkService.removeUserAndFriendships(3);
+        Set<Long> mostSociable = networkService.getMostSociableCommunity();
+        assert mostSociable.size() == 5 && mostSociable.contains(1L) && mostSociable.contains(5L);
+        assertThrows(ServiceException.class, () -> networkService.removeUserAndFriendships(999L), "cannot be deleted");
+        networkService.removeUserAndFriendships(3L);
         assert userService.getAllUsers().size() == 9;
-        assert fsService.getFriendIds(2).size() == 1 && fsService.getFriendIds(4).size() == 1;
+        assert fsService.getFriendIds(2L).size() == 1 && fsService.getFriendIds(4L).size() == 1;
         assert networkService.getNumberOfCommunities() == 4;
-
-        Set<Integer> splitA = networkService.getCommunity(1);
-        Set<Integer> splitB = networkService.getCommunity(5);
+        Set<Long> splitA = networkService.getCommunity(1L);
+        Set<Long> splitB = networkService.getCommunity(5L);
         assert splitA.size() == 2 && splitB.size() == 2;
     }
 

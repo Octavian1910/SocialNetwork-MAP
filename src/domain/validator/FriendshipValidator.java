@@ -1,48 +1,39 @@
 package domain.validator;
 
-import domain.FriendShip;
-
+import domain.Friendship;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Predicate;
 
-/**
- * Concrete strategy implementing domain validation for {@link FriendShip} entities.
- */
-public class FriendShipValidator implements Validator<FriendShip> {
-
-    private record ValidationRule(Predicate<FriendShip> predicate, String errorMessage) {}
-
+public class FriendshipValidator implements Validator<Friendship> {
+    private record ValidationRule(Predicate<Friendship> predicate, String errorMessage) {}
     private final List<ValidationRule> rules = new ArrayList<>();
 
-    public FriendShipValidator() {
+    public FriendshipValidator() {
         rules.add(new ValidationRule(
-                fs -> fs.getFirstUserId() > 0,
+                fs -> fs.getFirstUserId() != null && fs.getFirstUserId() > 0,
                 "First user ID must be positive!"
         ));
-
         rules.add(new ValidationRule(
-                fs -> fs.getSecondUserId() > 0,
+                fs -> fs.getSecondUserId() != null && fs.getSecondUserId() > 0,
                 "Second user ID must be positive!"
         ));
-
         rules.add(new ValidationRule(
-                fs -> fs.getFirstUserId() != fs.getSecondUserId(),
+                fs -> !Objects.equals(fs.getFirstUserId(), fs.getSecondUserId()),
                 "A user cannot be friends with themselves!"
         ));
     }
 
     @Override
-    public void validate(FriendShip friendShip) {
+    public void validate(Friendship friendShip) {
         if (friendShip == null) {
             throw new ValidationException("Friendship cannot be null!");
         }
-
         List<String> errors = rules.stream()
                 .filter(rule -> !rule.predicate().test(friendShip))
-                .map(rule -> rule.errorMessage())
+                .map(ValidationRule::errorMessage)
                 .toList();
-
         if (!errors.isEmpty()) {
             throw new ValidationException(String.join(" ", errors));
         }

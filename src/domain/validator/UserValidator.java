@@ -26,7 +26,7 @@ public class UserValidator implements Validator<User> {
      * Constructs a new UserValidator with standard validation rules.
      */
     public UserValidator() {
-        rules.add(new ValidationRule(user -> user.getId() != null && user.getId() > 0, "User ID must be positive!"));
+        rules.add(new ValidationRule(user -> user.getId() == null || user.getId() > 0, "User ID must be positive!"));
         rules.add(new ValidationRule(user -> user.getFirstName() != null && !user.getFirstName().trim().isEmpty(), "First name cannot be empty!"));
         rules.add(new ValidationRule(user -> user.getFirstName() != null && !user.getFirstName().trim().isEmpty() && Character.isUpperCase(user.getFirstName().trim().charAt(0)), "First name must start with an uppercase letter!"));
         rules.add(new ValidationRule(user -> user.getLastName() != null && !user.getLastName().trim().isEmpty(), "Last name cannot be empty!"));

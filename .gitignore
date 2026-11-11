@@ -43,3 +43,9 @@ invalid_users.txt
 invalid_friendships.txt
 fisier_inexistent_test.txt
 *.tmp
+
+
+### Database / Production Configuration ###
+config.properties
+src/resources/config.properties
+

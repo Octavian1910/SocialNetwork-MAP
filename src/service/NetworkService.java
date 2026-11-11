@@ -16,7 +16,7 @@ public class NetworkService {
         this.friendShipService = friendShipService;
     }
 
-    private int getLongestPathInCommunity(List<Integer> community) {
+    private int getLongestPathInCommunity(List<Long> community) {
         if (community == null || community.size() <= 1) {
             return 0;
         }
@@ -33,7 +33,6 @@ public class NetworkService {
         return maxDistance;
     }
 
-
     /**
      * Computes the shortest path between two nodes using Breadth-First Search (BFS).
      *
@@ -41,20 +40,20 @@ public class NetworkService {
      * @param targetId destination user ID
      * @return shortest distance, or -1 if unreachable
      */
-    private int getDistance(int startId, int targetId) {
-        Queue<Integer> queue = new LinkedList<>();
-        Map<Integer, Integer> distances = new HashMap<>();
+    private int getDistance(Long startId, Long targetId) {
+        Queue<Long> queue = new LinkedList<>();
+        Map<Long, Integer> distances = new HashMap<>();
 
         queue.add(startId);
         distances.put(startId, 0);
 
         while (!queue.isEmpty()) {
-            int currentId = queue.poll();
-            if (currentId == targetId) {
+            Long currentId = queue.poll();
+            if (Objects.equals(currentId, targetId)) {
                 return distances.get(currentId);
             }
 
-            for (Integer friendId : friendShipService.getFriendIds(currentId)) {
+            for (Long friendId : friendShipService.getFriendIds(currentId)) {
                 if (!distances.containsKey(friendId)) {
                     distances.put(friendId, distances.get(currentId) + 1);
                     queue.add(friendId);
@@ -70,20 +69,20 @@ public class NetworkService {
      * @param userId  starting user ID
      * @param visited set tracking visited nodes
      */
-    private void dfs(int userId, Set<Integer> visited) {
+    private void dfs(Long userId, Set<Long> visited) {
         dfs(userId, visited, null);
     }
 
-    private void dfs(int userId, Set<Integer> visited, List<Integer> community) {
+    private void dfs(Long userId, Set<Long> visited, List<Long> community) {
         visited.add(userId);
         if (community != null) {
             community.add(userId);
         }
+
         friendShipService.getFriendIds(userId).stream()
                 .filter(friendId -> !visited.contains(friendId))
                 .forEach(friendId -> dfs(friendId, visited, community));
     }
-
 
     /**
      * Computes the total number of communities (connected components) in the network.
@@ -91,7 +90,7 @@ public class NetworkService {
      * @return count of connected components
      */
     public int getNumberOfCommunities() {
-        Set<Integer> visited = new HashSet<>();
+        Set<Long> visited = new HashSet<>();
         return (int) userService.getAllUsers().stream()
                 .filter(user -> {
                     if (!visited.contains(user.getId())) {
@@ -108,21 +107,20 @@ public class NetworkService {
      *
      * @return set of user IDs forming the most sociable community
      */
-    public Set<Integer> getMostSociableCommunity() {
+    public Set<Long> getMostSociableCommunity() {
         return getAllCommunities().stream()
                 .max(Comparator.comparingInt(this::getLongestPathInCommunity))
-                .map(HashSet::new) //transforma list<Integer> in Set
-                .orElseGet(HashSet::new); //returneaza set gol daca reteaua nu are nicio comunitate
+                .map(HashSet::new)
+                .orElseGet(HashSet::new);
     }
 
-
-    private List<List<Integer>> getAllCommunities() {
-        Set<Integer> visited = new HashSet<>();
-        List<List<Integer>> communities = new ArrayList<>();
+    private List<List<Long>> getAllCommunities() {
+        Set<Long> visited = new HashSet<>();
+        List<List<Long>> communities = new ArrayList<>();
 
         userService.getAllUsers().forEach(user -> {
             if (!visited.contains(user.getId())) {
-                List<Integer> currentCommunity = new ArrayList<>();
+                List<Long> currentCommunity = new ArrayList<>();
                 dfs(user.getId(), visited, currentCommunity);
                 communities.add(currentCommunity);
             }
@@ -130,13 +128,12 @@ public class NetworkService {
         return communities;
     }
 
-
     /**
      * Removes a user and all their associated friendships, ensuring storage consistency.
      *
      * @param userId user ID to delete
      */
-    public void removeUserAndFriendships(int userId) {
+    public void removeUserAndFriendships(Long userId) {
         friendShipService.removeAllFriendshipsOfUser(userId);
         userService.removeUser(userId);
     }
@@ -148,8 +145,8 @@ public class NetworkService {
      * @return set of user IDs belonging to that community
      * @throws ServiceException if the user does not exist
      */
-    public Set<Integer> getCommunity(int userId) {
-        Set<Integer> community = new HashSet<>();
+    public Set<Long> getCommunity(Long userId) {
+        Set<Long> community = new HashSet<>();
         userService.findUserById(userId);
         dfs(userId, community);
         return community;

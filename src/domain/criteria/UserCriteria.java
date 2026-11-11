@@ -38,7 +38,7 @@ public final class UserCriteria { //final inseamna ca aceasta clasa nu poate sa 
      * @param minId the minimum ID threshold
      * @return a predicate testing the user's ID
      */
-    public static Predicate<User> idGreaterThan(int minId) {
+    public static Predicate<User> idGreaterThan(long minId) {
         return user -> user.getId() > minId;
     }
 }
