@@ -3,22 +3,51 @@ package service;
 import domain.User;
 import domain.validator.ValidationException;
 import domain.validator.Validator;
+import repository.PagingRepository;
 import repository.Repository;
 import repository.RepositoryException;
+import util.paging.Page;
+import util.paging.Pageable;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 /**
  * Service orchestrating operations on User entities.
  */
 public class UserService {
-    private final Repository<Long, User> repository;
+    private final Repository<Long, User> userRepository;
     private final Validator<User> validator;
 
-    public UserService(Repository<Long, User> repository, Validator<User> validator) {
-        this.repository = repository;
+    public UserService(Repository<Long, User> userRepository, Validator<User> validator) {
+        this.userRepository = userRepository;
         this.validator = validator;
+    }
+
+
+    public Page<User> getUsersOnPage(Pageable pageable) {
+        if (userRepository instanceof PagingRepository<Long, User> pagingRepo) {
+            return pagingRepo.findAllOnPage(pageable);
+        }
+
+        // Fallback clasic daca nu este repoul de tip DATABASE
+        List<User> allUsers = new ArrayList<>(userRepository.findAll());
+        int totalCount = allUsers.size();
+
+        int offset = pageable.getPageNumber() * pageable.getPageSize();
+        int limit = pageable.getPageSize();
+
+        List<User> pageContent = new ArrayList<>();
+
+        for (int i = offset; i < offset + limit && i < totalCount; i++) {
+            if (i >= 0) {
+                pageContent.add(allUsers.get(i));
+            }
+        }
+
+        return new Page<>(pageContent, totalCount);
     }
 
     /**
@@ -33,7 +62,7 @@ public class UserService {
     public User addUser(Long id, String firstName, String lastName) {
         User user = new User(id, firstName, lastName);
         validator.validate(user);
-        repository.add(user);
+        userRepository.add(user);
         return user;
     }
 
@@ -48,7 +77,7 @@ public class UserService {
     public User addUser(String firstName, String lastName) {
         User user = new User(firstName, lastName);
         validator.validate(user);
-        repository.add(user);
+        userRepository.add(user);
         return user;
     }
 
@@ -60,7 +89,7 @@ public class UserService {
      * @throws ServiceException if the user does not exist
      */
     public void removeUser(Long id) {
-        Optional<User> removed = repository.remove(id);
+        Optional<User> removed = userRepository.remove(id);
         if (removed.isEmpty()) {
             throw new ServiceException("User with ID " + id + " does not exist and cannot be deleted!");
         }
@@ -74,7 +103,7 @@ public class UserService {
      * @throws ServiceException if user was not found
      */
     public User findUserById(Long id) {
-        return repository.findById(id)
+        return userRepository.findById(id)
                 .orElseThrow(() -> new ServiceException("User with ID " + id + " does not exist!"));
     }
 
@@ -84,6 +113,6 @@ public class UserService {
      * @return collection of users
      */
     public Collection<User> getAllUsers() {
-        return repository.findAll();
+        return userRepository.findAll();
     }
 }

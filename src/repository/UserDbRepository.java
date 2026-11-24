@@ -1,16 +1,19 @@
 package repository;
 
 import domain.User;
-import domain.validator.Validator;
+import util.paging.Page;
+import util.paging.Pageable;
 
-import java.nio.file.OpenOption;
 import java.sql.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * Database repository implementation for User entities.
  */
-public class UserDbRepository implements Repository<Long, User> {
+public class UserDbRepository implements PagingRepository<Long, User> {
 
     static {
         try {
@@ -39,6 +42,62 @@ public class UserDbRepository implements Repository<Long, User> {
         this.url = url;
         this.username = username;
         this.password = password;
+    }
+
+    /**
+     * Retrieves a single page of users, ordered by ID. The page content and the total
+     * number of users are read with two statements executed on the same connection.
+     *
+     * @param pageable the requested page (zero-based page number and page size), must not be null
+     * @return a {@link Page} holding the users on that page and the total number of users;
+     * the user list is empty if the requested page lies after the last one
+     * @throws IllegalArgumentException if pageable is null
+     * @throws RepositoryException      if the database cannot be queried
+     */
+    @Override
+    public Page<User> findAllOnPage(Pageable pageable) {
+
+        if (pageable == null) {
+            throw new IllegalArgumentException("pageable cannot be null!");
+        }
+
+        int offset = pageable.getPageNumber() * pageable.getPageSize();
+        int limit = pageable.getPageSize();
+
+        String sql = "SELECT id, first_name, last_name FROM users ORDER BY id LIMIT ? OFFSET ?";
+        String sqlCount = "SELECT count(*) FROM users";
+
+        List<User> users = new ArrayList<>();
+        int totalCount = 0;
+
+        try (Connection connection = DriverManager.getConnection(url, username, password)) {
+
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setInt(1, limit);
+                statement.setInt(2, offset);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    while (resultSet.next()) {
+                        Long id = resultSet.getLong("id");
+                        String firstName = resultSet.getString("first_name");
+                        String lastName = resultSet.getString("last_name");
+
+                        User user = new User(id, firstName, lastName);
+                        users.add(user);
+                    }
+                }
+            }
+
+            try (PreparedStatement countStatement = connection.prepareStatement(sqlCount);
+                 ResultSet countResultSet = countStatement.executeQuery()) {
+                if (countResultSet.next()) {
+                    totalCount = countResultSet.getInt(1);
+                }
+            }
+
+        } catch (SQLException e) {
+            throw new RepositoryException("Database error retrieving users on page " + pageable.getPageNumber() + ": " + e.getMessage(), e);
+        }
+        return new Page<>(users, totalCount);
     }
 
     @Override

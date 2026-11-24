@@ -91,4 +91,25 @@ public class RepositoryFactory {
     public RepositoryType getRepositoryType() {
         return repositoryType;
     }
+
+
+    /**
+     * Reads the size of a page (number of elements listed at once) from the 'page.size' property.
+     * The value is only parsed here; its range is checked when the page request is built.
+     *
+     * @return the configured page size
+     * @throws RepositoryException if the property is missing or is not a whole number
+     */
+    public int getPageSize(){
+        String pageSizeStr = properties.getProperty("page.size");
+        if (pageSizeStr == null || pageSizeStr.trim().isEmpty()) {
+            throw new RepositoryException("Missing configuration property: 'page.size'");
+        }
+        try{
+            return Integer.parseInt(pageSizeStr.trim());
+        }catch (NumberFormatException e){
+            throw new RepositoryException("Invalid page.size value: " + pageSizeStr, e);
+        }
+    }
+
 }

@@ -27,7 +27,7 @@ public class Main {
         FriendShipService friendshipService = new FriendShipService(friendshipRepository, userService, friendShipValidator);
         NetworkService networkService = new NetworkService(userService, friendshipService);
 
-        Console console = new Console(userService, friendshipService, networkService, factory.getRepositoryType());
+        Console console = new Console(userService, friendshipService, networkService, factory.getRepositoryType(), factory.getPageSize());
         console.run();
     }
 }

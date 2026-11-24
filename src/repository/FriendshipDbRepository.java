@@ -1,25 +1,109 @@
 package repository;
 
 import domain.Friendship;
+import domain.User;
+import util.paging.Page;
+import util.paging.Pageable;
 
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.*;
 
 /**
- * Skeleton repository for friendship database persistence (to be implemented via JDBC in Lab 4).
+ * Repository for friendship database persistence using JDBC.
  */
-public class FriendshipDbRepository implements Repository<String, Friendship> {
+public class FriendshipDbRepository implements FriendshipPagingRepository {
     private final String url;
     private final String username;
     private final String password;
 
+    /**
+     * Constructs a new FriendshipDbRepository.
+     *
+     * @param url      the database URL
+     * @param username the database username
+     * @param password the database password
+     */
     public FriendshipDbRepository(String url, String username, String password) {
         this.url = url;
         this.username = username;
         this.password = password;
     }
 
+    /**
+     * Retrieves a paginated list of friends for a specific user using a single SQL JOIN query.
+     *
+     * @param userId   the ID of the user whose friends are being retrieved
+     * @param pageable the pagination parameters (page number and page size)
+     * @return a Page object containing the list of friend User entities and the total count
+     */
+    @Override
+    public Page<User> findFriendsOnPage(Long userId, Pageable pageable) {
+        if (userId == null || pageable == null) {
+            throw new IllegalArgumentException("userId or pageable is null");
+        }
+
+        int offset = pageable.getPageNumber() * pageable.getPageSize();
+        int limit = pageable.getPageSize();
+
+        String sql = "SELECT u.id,u.first_name,u.last_name " +
+                "FROM users u " +
+                "JOIN friendships f " +
+                "ON (u.id = f.id1 OR u.id = f.id2) " +
+                "WHERE (f.id1 = ? OR f.id2 = ?) AND u.id != ? " +
+                "ORDER BY u.id LIMIT ? OFFSET ?";
+
+        String sqlCount = "SELECT count(*) FROM friendships WHERE id1 = ? OR id2 = ?";
+
+        List<User> friends = new ArrayList<>();
+        int totalCount = 0;
+
+        try (Connection connection = DriverManager.getConnection(url, username, password)) {
+
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setLong(1, userId);
+                statement.setLong(2, userId);
+                statement.setLong(3, userId);
+                statement.setInt(4, limit);
+                statement.setInt(5, offset);
+
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    while (resultSet.next()) {
+                        Long id = resultSet.getLong("id");
+                        String firstName = resultSet.getString("first_name");
+                        String lastName = resultSet.getString("last_name");
+
+                        User user = new User(id, firstName, lastName);
+                        friends.add(user);
+                    }
+                }
+            }
+
+            try (PreparedStatement countStatement = connection.prepareStatement(sqlCount)) {
+                countStatement.setLong(1, userId);
+                countStatement.setLong(2, userId);
+
+                try (ResultSet countResultSet = countStatement.executeQuery()) {
+                    if (countResultSet.next()) {
+                        totalCount = countResultSet.getInt(1);
+                    }
+                }
+            }
+
+        } catch (SQLException e) {
+            throw new RepositoryException("Database error retrieving users on page "
+                    + pageable.getPageNumber() + ": " + e.getMessage(), e);
+        }
+
+        return new Page<>(friends, totalCount);
+    }
+
+    /**
+     * Parses a composite friendship ID string into an ordered array of two long IDs.
+     *
+     * @param id the composite ID string (expected format 'id1-id2')
+     * @return a sorted long array of length 2
+     */
     private long[] parseId(String id) {
         if (id == null) {
             throw new IllegalArgumentException("ID must not be null!");
@@ -39,6 +123,11 @@ public class FriendshipDbRepository implements Repository<String, Friendship> {
         }
     }
 
+    /**
+     * Adds a new friendship to the database.
+     *
+     * @param entity the friendship entity to add
+     */
     @Override
     public void add(Friendship entity) {
         if (entity == null) {
@@ -64,6 +153,12 @@ public class FriendshipDbRepository implements Repository<String, Friendship> {
         }
     }
 
+    /**
+     * Removes a friendship by its composite ID.
+     *
+     * @param id the composite ID string of the friendship to remove
+     * @return an Optional containing the removed friendship, or Optional.empty() if not found
+     */
     @Override
     public Optional<Friendship> remove(String id) {
         if (id == null) {
@@ -92,6 +187,12 @@ public class FriendshipDbRepository implements Repository<String, Friendship> {
         }
     }
 
+    /**
+     * Finds a friendship by its composite ID.
+     *
+     * @param id the composite ID string
+     * @return an Optional containing the friendship if found, or Optional.empty() otherwise
+     */
     @Override
     public Optional<Friendship> findById(String id) {
         if (id == null) {
@@ -124,6 +225,11 @@ public class FriendshipDbRepository implements Repository<String, Friendship> {
 
     }
 
+    /**
+     * Retrieves all friendships from the database.
+     *
+     * @return a collection of all stored friendships
+     */
     @Override
     public Collection<Friendship> findAll() {
         List<Friendship> friendships = new ArrayList<>();
@@ -148,6 +254,12 @@ public class FriendshipDbRepository implements Repository<String, Friendship> {
 
     }
 
+    /**
+     * Updates an existing friendship in the database.
+     *
+     * @param entity the friendship entity with updated data
+     * @return Optional.empty() if successful, or an Optional containing the entity if it wasn't found
+     */
     @Override
     public Optional<Friendship> update(Friendship entity) {
         if (entity == null) {
@@ -175,7 +287,8 @@ public class FriendshipDbRepository implements Repository<String, Friendship> {
         } catch (SQLException e) {
             throw new RepositoryException("Database error updating friendship: " + e.getMessage(), e);
         }
-
-
     }
+
+
+
 }
