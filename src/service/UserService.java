@@ -26,7 +26,15 @@ public class UserService {
         this.validator = validator;
     }
 
-
+    /**
+     * Retrieves a single page of users, ordered by ID.
+     * For a {@link PagingRepository} (Database storage) the paging is done by the repository, in SQL;
+     * for the other storage types the page is cut out of the full user list.
+     *
+     * @param pageable the requested page (zero-based page number and page size), must not be null
+     * @return a {@link Page} holding the users on that page and the total number of users;
+     * the user list is empty if the requested page lies after the last one
+     */
     public Page<User> getUsersOnPage(Pageable pageable) {
         if (userRepository instanceof PagingRepository<Long, User> pagingRepo) {
             return pagingRepo.findAllOnPage(pageable);
